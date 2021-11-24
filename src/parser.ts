@@ -1,6 +1,13 @@
 import _ from "lodash";
 import DefaultMap from "./defaultMap";
 
+const edgeMapDefaultValue: Edge[] = [];
+
+export const graph: PackageGraph = {
+  nodes: new Map(),
+  edges: new DefaultMap(edgeMapDefaultValue),
+};
+
 type PackageObject = Record<string, string>;
 
 interface Package {
@@ -13,7 +20,7 @@ interface Edge {
   type: "normal" | "reversed" | "alternative" | "reversed-alternative";
   alternatives?: Package["name"][];
 }
-interface PackageGraph {
+export interface PackageGraph {
   nodes: Map<Package["name"], Package>;
   edges: DefaultMap<Package["name"], Edge[]>;
 }
@@ -38,15 +45,15 @@ const parseSinglePackageStringToObject = (pkg: string) => {
 };
 
 const parseName = (name: string) => {
-  if (name === "") {
-    throw new Error("Name of the package was empty!");
+  if (!name) {
+    return "";
   }
   return name.trim();
 };
 
 const parseDescription = (description: string) => {
-  if (description === "") {
-    throw new Error("Description of the package was empty!");
+  if (!description) {
+    return "";
   }
   return description;
 };
@@ -69,11 +76,13 @@ const addAlternativeDepsToGraph = (node: Package, dependencies: string, graph: P
 const enrichGraphFromPackageObject = (pkg: PackageObject, graph: PackageGraph) => {
   const wantedProperties = ["Package", "Description"];
   if (_.difference(wantedProperties, Object.keys(pkg)).length > 0) {
-    throw new Error("Package didn't have all the wanted properties!");
+    console.error(
+      `Note! Package didn't have all wanted properties, falling back to other props. Pkg: ${JSON.stringify(pkg)}`
+    );
   }
 
   const node = {
-    name: parseName(pkg.Package),
+    name: parseName(pkg.Package) || parseName(pkg.Source),
     description: parseDescription(pkg.Description),
   };
   graph.nodes.set(node.name, node);
@@ -91,12 +100,6 @@ const enrichGraphFromPackageObject = (pkg: PackageObject, graph: PackageGraph) =
 };
 
 export const parsePackagesFromString = (packages: string) => {
-  const edgeMapDefaultValue: Edge[] = [];
-  const graph: PackageGraph = {
-    nodes: new Map(),
-    edges: new DefaultMap(edgeMapDefaultValue),
-  };
-
   packages
     .split("\n\n")
     .map(pkg => parseSinglePackageStringToObject(pkg))
@@ -105,5 +108,4 @@ export const parsePackagesFromString = (packages: string) => {
   for (const [nodeName, edgeList] of graph.edges.entries()) {
     graph.edges.set(nodeName, _.uniqBy(edgeList, "target"));
   }
-  return graph;
 };
