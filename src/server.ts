@@ -1,6 +1,6 @@
 import Fastify, { FastifyInstance } from "fastify";
 import { readFileFromPathToString } from "./io";
-import { parsePackagesFromString } from "./parser";
+import { createPackageGraph } from "./parser";
 import routes from "./routes";
 
 const server: FastifyInstance = Fastify({ logger: true });
@@ -9,7 +9,7 @@ server.register(routes);
 const createGraphBeforeStarting = async () => {
   // should be fetched from startup command tms
   const path = "./examples/status";
-  parsePackagesFromString(await readFileFromPathToString(path));
+  createPackageGraph(await readFileFromPathToString(path));
 };
 
 export const startServer = async () => {

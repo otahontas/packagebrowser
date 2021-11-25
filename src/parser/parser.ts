@@ -1,34 +1,20 @@
 import _ from "lodash";
 import DefaultMap from "./defaultMap";
-
+import { Edge, PackageGraph, Package, PackageObject } from "./types";
 const edgeMapDefaultValue: Edge[] = [];
 
+/**
+ * Graph singleton for the whole app.
+ */
 export const graph: PackageGraph = {
   nodes: new Map(),
   edges: new DefaultMap(edgeMapDefaultValue),
 };
 
-type PackageObject = Record<string, string>;
-
-interface Package {
-  name: string;
-  description: string;
-}
-
-interface Edge {
-  target: Package["name"];
-  type: "normal" | "reversed" | "alternative" | "reversed-alternative";
-  alternatives?: Package["name"][];
-}
-export interface PackageGraph {
-  nodes: Map<Package["name"], Package>;
-  edges: DefaultMap<Package["name"], Edge[]>;
-}
-
 /**
  *
- * Parses single package with regex matching 'key: value' -pairs in string that follows
- * debian control file syntax.
+ * Parses single package with Regex. Rexex used matches 'key: value' -pairs following
+ * the Debian control file syntax.
  *
  * @returns Key-value pairs representing single package
  */
@@ -39,23 +25,9 @@ const parseSinglePackageStringToObject = (pkg: string) => {
     const [, key, value] = curr;
     return {
       ...acc,
-      [key]: value,
+      [key]: value.trim(),
     };
   }, {});
-};
-
-const parseName = (name: string) => {
-  if (!name) {
-    return "";
-  }
-  return name.trim();
-};
-
-const parseDescription = (description: string) => {
-  if (!description) {
-    return "";
-  }
-  return description;
 };
 
 const trimDepencency = (dependency: string) => dependency.split("(")[0].trim();
@@ -82,8 +54,8 @@ const enrichGraphFromPackageObject = (pkg: PackageObject, graph: PackageGraph) =
   }
 
   const node = {
-    name: parseName(pkg.Package) || parseName(pkg.Source),
-    description: parseDescription(pkg.Description),
+    name: pkg.Package || pkg.Source,
+    description: pkg.Description,
   };
   graph.nodes.set(node.name, node);
 
@@ -99,7 +71,7 @@ const enrichGraphFromPackageObject = (pkg: PackageObject, graph: PackageGraph) =
   });
 };
 
-export const parsePackagesFromString = (packages: string) => {
+export const createPackageGraph = (packages: string) => {
   packages
     .split("\n\n")
     .map(pkg => parseSinglePackageStringToObject(pkg))
