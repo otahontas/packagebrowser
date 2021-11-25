@@ -13,8 +13,8 @@ export const graph: PackageGraph = {
 
 /**
  *
- * Parses single package with Regex. Rexex used matches 'key: value' -pairs following
- * the Debian control file syntax.
+ * Parses single package with Regex. Rexex used matches all 'key: value' -pairs
+ * in block that follows the Debian control file syntax.
  *
  * @returns Key-value pairs representing single package
  */
@@ -73,11 +73,12 @@ const enrichGraphFromPackageObject = (pkg: PackageObject, graph: PackageGraph) =
 
 export const createPackageGraph = (packages: string) => {
   packages
+    .trim()
     .split("\n\n")
     .map(pkg => parseSinglePackageStringToObject(pkg))
     .forEach(pkg => enrichGraphFromPackageObject(pkg, graph));
 
-  for (const [nodeName, edgeList] of graph.edges.entries()) {
+  [...graph.edges.entries()].forEach(([nodeName, edgeList]) => {
     graph.edges.set(nodeName, _.uniqBy(edgeList, "target"));
-  }
+  });
 };

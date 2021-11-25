@@ -4,7 +4,7 @@
   "main": "index.ts",
   "license": "MIT",
   "scripts": {
-    "dev": "ts-node-dev src/index.ts",
+    "dev": "ts-node-dev src/server/index.ts",
     "tsc": "tsc",
     "prepare": "husky install"
   },
@@ -29,6 +29,7 @@
   "dependencies": {
     "fastify": "^3.24.0",
     "fastify-plugin": "^3.0.0",
+    "got": "^11.8.3",
     "lodash": "^4.17.21"
   }
 }

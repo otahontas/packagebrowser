@@ -1,7 +1,7 @@
 /**
  * @template K,V
  * @extends {Map<K,V>}
- * Class that mimics Python's defaultDictionary class: Getting a value will return
+ * Class that mimics Python's defaultdict class: Getting a value will return
  * default value if the value would be undefined.
  *
  * Example usage:
@@ -22,9 +22,8 @@ class DefaultMap<K, V> extends Map<K, V> {
   }
 
   /**
-   *
-   * If value not founds, sets key to have deepcopy of default value as its value. Also
-   * ensures to Typescript that a some value is always returned
+   * If value for key is not found, sets the value to be a deep copy of the default
+   * value. Also keeps typescript happy by ensuring undefined is never returned.
    */
   get(key: K): V {
     if (!this.has(key)) {
