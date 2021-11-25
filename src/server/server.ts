@@ -1,11 +1,15 @@
 import Fastify, { FastifyInstance } from "fastify";
+import fastifyCors from "fastify-cors";
 import routes from "./routes";
 import { createPackageGraph } from "./parser";
 import { readFileFromPathToString, readUrlContentToString } from "./io";
-import { statusFileExampleUrl, statusFilePath, port } from "./conf";
+import { statusFileExampleUrl, statusFilePath, port, frontendUrl } from "./conf";
 
 const server: FastifyInstance = Fastify({ logger: true });
 server.register(routes);
+server.register(fastifyCors, {
+  origin: frontendUrl,
+});
 
 const onStart = async () => {
   server.log.info("Reading package file...");
