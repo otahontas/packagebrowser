@@ -1,10 +1,11 @@
-import * as React from "react";
 import axios from "axios";
+import styled from "styled-components";
 import { QueryKey, useQuery } from "react-query";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link as RouterLink } from "react-router-dom";
 import { apiUrl } from "../../conf";
 import { dependencyTypes } from "../../../server/routes";
 import type { SinglePackage } from "../../../server/routes";
+import { colors, fontWeights } from "../../constants";
 
 const getPackage = async ({ queryKey }: { queryKey: QueryKey }) => {
   const [, packageName] = queryKey;
@@ -22,40 +23,95 @@ interface LinkProps {
   dependency: Pick<Dependency, "target" | "targetInGraph">;
 }
 
-interface AlternativeProps {
-  alternatives: Required<Dependency>["alternatives"];
-}
+const Link = styled(RouterLink)`
+  display: block;
+  text-decoration: none;
+  font-weight: ${fontWeights.medium};
+  color: ${colors.gray[900]};
+  line-height: 2;
 
-const parseAlternatives = ({ alternatives }: AlternativeProps) => {
-  console.log("parsing alternatives", alternatives);
-  return alternatives;
-};
+  &:hover {
+    text-decoration: underline;
+  }
+`;
 
 const DependencyLink = ({ dependency }: LinkProps) =>
   dependency.targetInGraph ? (
     <Link to={`../${dependency.target}`}>{dependency.target}</Link>
   ) : (
-    <span>{dependency.target} (No link available)</span>
+    <span>{dependency.target}</span>
   );
+
+const StyledListItem = styled.li`
+  &::marker {
+    color: ${colors.secondary};
+    content: " ⇒ ";
+  }
+`;
+
+const Alternatives = styled.p`
+  color: ${colors.gray[700]};
+`;
 
 const DependencyItem = ({ dependency }: DependencyProps) => {
   return (
-    <li style={{ border: "1px solid black", padding: "8px" }}>
+    <StyledListItem>
       <DependencyLink dependency={dependency} />
       {dependency.alternatives && (
-        <p>
+        <Alternatives>
           {dependency.type === dependencyTypes["reversed-alternative"]
             ? "can alternatively depend on: "
-            : "can alternatively install: "}
-          {parseAlternatives({ alternatives: dependency.alternatives }).map(alternative => (
-            <React.Fragment key={alternative.target}>
+            : "or alternatively: "}{" "}
+          {dependency.alternatives.map((alternative, i) => (
+            <>
+              {i > 0 && ", "}
               <DependencyLink dependency={alternative} />{" "}
-            </React.Fragment>
+            </>
           ))}
-        </p>
+        </Alternatives>
       )}
-    </li>
+    </StyledListItem>
   );
+};
+
+const Title = styled.h2`
+  font-size: 2.5rem;
+  font-weight: ${fontWeights.bold};
+`;
+
+const Description = styled.p`
+  white-space: pre-line;
+`;
+
+const Stack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
+
+const replaceSymbolsWithLists = (symbol: "+" | "*", original: string) => {
+  const parts = original.split(`${symbol} `);
+  let listed = [parts[0], "<ul>"];
+  parts.forEach(part => (listed = listed.concat(["<li>", part, "</li>"])));
+  return listed.join("");
+};
+
+const formatDescription = (description: SinglePackage["description"]) => {
+  let formatted = description;
+
+  // format links with replace
+  formatted = formatted
+    .replace(/<(.*)>/g, "<a href='$1'>$1</a>")
+    .replace(/git:\/\/(.*)/g, "<a href='git://$1'>git://$1<a>");
+
+  // If there are lists made with * or +, replace with <ul> <li> list
+  if (formatted.includes(`* `)) {
+    formatted = replaceSymbolsWithLists("*", formatted);
+  }
+  if (formatted.includes(`+ `)) {
+    formatted = replaceSymbolsWithLists("+", formatted);
+  }
+  return { __html: formatted };
 };
 
 const SinglePackageView = () => {
@@ -64,11 +120,12 @@ const SinglePackageView = () => {
 
   if (status === "loading") return <span>Loading...</span>;
   if (status === "error" && error) return <span>Error: {error.message}</span>;
+  if (!data) return <span>Wasn't able to load data for some reason!</span>;
 
   return (
-    <>
-      <h1>{data?.name}</h1>
-      <p>{data?.description}</p>
+    <Stack>
+      <Title>{data.name}</Title>
+      <Description dangerouslySetInnerHTML={formatDescription(data.description)} />
       {data && data.dependencies.length > 0 && (
         <>
           <h2>Packages this package depends on</h2>
@@ -89,7 +146,7 @@ const SinglePackageView = () => {
           </ul>
         </>
       )}
-    </>
+    </Stack>
   );
 };
 
