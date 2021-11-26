@@ -4,19 +4,25 @@
   "main": "index.ts",
   "license": "MIT",
   "scripts": {
-    "dev": "ts-node-dev src/server/index.ts",
+    "dev": "concurrently 'yarn run dev:client' 'yarn run dev:server'",
+    "dev:client": "vite serve src/client",
+    "dev:server": "ts-node-dev src/server/index.ts",
     "tsc": "tsc",
     "prepare": "husky install"
   },
   "lint-staged": {
-    "src/**/*.{ts,tsx}": "eslint",
-    "*.{ts,json,md}": "prettier --write"
+    "*.{ts,json,md}": "prettier --write",
+    "src/**/*.{ts,tsx}": "eslint"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.177",
     "@types/node": "^16.11.7",
+    "@types/react": "^17.0.35",
+    "@types/react-dom": "^17.0.11",
     "@typescript-eslint/eslint-plugin": "^5.4.0",
     "@typescript-eslint/parser": "^5.4.0",
+    "@vitejs/plugin-react": "^1.0.9",
+    "concurrently": "^6.4.0",
     "eslint": "^8.2.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^4.0.0",
@@ -24,12 +30,20 @@
     "lint-staged": "^12.0.2",
     "prettier": "^2.4.1",
     "ts-node-dev": "^1.1.8",
-    "typescript": "^4.5.2"
+    "typescript": "^4.5.2",
+    "vite": "^2.6.14"
   },
   "dependencies": {
+    "axios": "^0.24.0",
     "fastify": "^3.24.0",
+    "fastify-cors": "^6.0.2",
     "fastify-plugin": "^3.0.0",
     "got": "^11.8.3",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-query": "^3.33.4",
+    "react-router-dom": "^6.0.2",
+    "styled-components": "^5.3.3"
   }
 }
