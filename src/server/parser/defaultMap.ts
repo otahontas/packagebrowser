@@ -29,7 +29,7 @@ class DefaultMap<K, V> extends Map<K, V> {
     if (!this.has(key)) {
       this.set(key, JSON.parse(JSON.stringify(this.defaultValue)));
     }
-    return super.get(key) || this.defaultValue;
+    return super.get(key) || JSON.parse(JSON.stringify(this.defaultValue));
   }
 }
 

@@ -1,2 +1,2 @@
-export { createPackageGraph, graph } from "./parser";
-export type { Package } from "./types";
+export { createPackageGraph, graph, edgeTypes } from "./parser";
+export type { Node, NodeId, Edge } from "./parser";

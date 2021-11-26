@@ -1,101 +1,109 @@
 import { RouteShorthandOptions } from "fastify";
 import fp from "fastify-plugin";
 import _ from "lodash";
+import { Static, Type } from "@sinclair/typebox";
 import { graph } from "./parser";
-import type { Package } from "./parser";
+import { edgeTypes } from "./parser";
+export { edgeTypes as dependencyTypes };
+import type { NodeId, Edge } from "./parser";
 
 declare module "fastify" {}
 
-const baseApiUrl = "/api/packages";
-const defaultPageSize = 25;
+const baseUrl = "/api/packages";
 
-const allPackagesRouteOpts: RouteShorthandOptions = {
+// === Route schemas and options ===
+
+const allPackages = Type.Object({
+  packages: Type.Array(Type.String()),
+  cursors: Type.Object({
+    after: Type.Optional(Type.String()),
+    before: Type.Optional(Type.String()),
+  }),
+});
+
+const allPackagesRouterOptions: RouteShorthandOptions = {
   schema: {
     response: {
-      200: {
-        type: "object",
-        required: ["packages", "cursors"],
-        properties: {
-          packages: {
-            type: "array",
-            items: {
-              type: "string",
-            },
-          },
-          cursors: {
-            type: "object",
-            required: [],
-            properties: {
-              after: { type: "string", nullable: true },
-              before: { type: "string", nullable: true },
-            },
-          },
-        },
-      },
+      200: allPackages,
     },
   },
 };
 
-const singlePackageRouteOps: RouteShorthandOptions = {
+// A bit of repetition in schema below for two reasons:
+// a) Fastify is not able to parse schema out of the box when using references (e.g. $dependency).
+// b) Making objecs inside alternatives-array recursive would break type inferring.
+const singlePackage = Type.Object({
+  name: Type.String(),
+  description: Type.String(),
+  dependencies: Type.Array(
+    Type.Object({
+      target: Type.String(),
+      type: Type.Enum(edgeTypes),
+      targetInGraph: Type.Boolean(),
+      alternatives: Type.Optional(
+        Type.Array(
+          Type.Object({
+            target: Type.String(),
+            targetInGraph: Type.Boolean(),
+          })
+        )
+      ),
+    })
+  ),
+  reverseDependencies: Type.Array(
+    Type.Object({
+      target: Type.String(),
+      type: Type.Enum(edgeTypes),
+      targetInGraph: Type.Boolean(),
+      alternatives: Type.Optional(
+        Type.Array(
+          Type.Object({
+            target: Type.String(),
+            targetInGraph: Type.Boolean(),
+          })
+        )
+      ),
+    })
+  ),
+});
+
+const singlePackageRouteOptions: RouteShorthandOptions = {
   schema: {
     response: {
-      200: {
-        type: "object",
-        required: ["name", "description", "dependencies", "reverseDependencies"],
-        properties: {
-          name: { type: "string" },
-          description: { type: "string" },
-          dependencies: {
-            type: "array",
-            items: {
-              type: "string",
-            },
-          },
-          reverseDependencies: {
-            type: "array",
-            items: {
-              type: "string",
-            },
-          },
-        },
-      },
+      200: singlePackage,
     },
   },
 };
 
-interface AllPackagesQuery {
-  size?: string;
-  before?: string;
-  after?: string;
+// === Types needed in helpers and routes ===
+export type AllPackages = Static<typeof allPackages>;
+
+export type SinglePackage = Static<typeof singlePackage>;
+
+type Cursors = AllPackages["cursors"];
+
+type Dependencies = SinglePackage["dependencies"];
+
+// === Helper functions ===
+interface PaginateProps extends Cursors {
+  nodes: NodeId[];
+  pageSize: number;
 }
 
-interface Cursors {
-  after?: string;
-  before?: string;
-}
+type GetNodesToPaginateProps = Omit<PaginateProps, "pageSize">;
 
-interface PaginatedReplyProps {
-  sizeFromReq: number;
-  nodes: Array<Package["name"]>;
-  before?: string;
-  after?: string;
-}
-
-const getNodesToPaginate = ({ before, after, nodes }: Omit<PaginatedReplyProps, "sizeFromReq">) => {
+const getNodesToPaginate = ({ after, before, nodes }: GetNodesToPaginateProps) => {
   if (before) return _.dropRightWhile(nodes, node => node >= before);
   if (after) return _.dropWhile(nodes, node => node <= after);
   return nodes;
 };
 
-const createPaginatedReply = ({ sizeFromReq, before, after, nodes }: PaginatedReplyProps) => {
-  const cursors: Cursors = {
-    after: undefined,
-    before: undefined,
-  };
+const paginate = ({ after, before, nodes, pageSize }: PaginateProps) => {
+  const cursors: Cursors = {};
 
   const nodesToPaginate = getNodesToPaginate({ before, after, nodes });
-  const pageSize = sizeFromReq > nodesToPaginate.length ? nodesToPaginate.length : sizeFromReq;
-  const paginated = before ? _.takeRight(nodesToPaginate, pageSize) : _.take(nodesToPaginate, pageSize);
+  const adjustedPageSize = pageSize > nodesToPaginate.length ? nodesToPaginate.length : pageSize;
+  const paginated = before ? _.takeRight(nodesToPaginate, adjustedPageSize) : _.take(nodesToPaginate, adjustedPageSize);
 
   const first = paginated[0];
   const last = paginated[paginated.length - 1];
@@ -103,44 +111,79 @@ const createPaginatedReply = ({ sizeFromReq, before, after, nodes }: PaginatedRe
   const originalIndexOfLast = _.sortedIndexOf(nodes, last);
   if (originalIndexOfFirst > 0) cursors.before = first;
   if (originalIndexOfLast < nodes.length - 1) cursors.after = last;
+
   return { paginated, cursors };
 };
 
-export default fp(async fastify => {
-  fastify.get<{ Querystring: AllPackagesQuery }>(baseApiUrl, allPackagesRouteOpts, async (request, reply) => {
-    const { size, before: encodedBefore, after: encodedAfter } = request.query;
+interface CreateDependenciesFromEdgesProps {
+  edges: Edge[];
+  filterReversed: boolean;
+}
 
-    const before = encodedBefore && decodeURIComponent(encodedBefore);
-    const after = encodedAfter && decodeURIComponent(encodedAfter);
+const createDependenciesFromEdges = ({ edges, filterReversed }: CreateDependenciesFromEdgesProps): Dependencies =>
+  edges
+    .filter(({ type }) =>
+      filterReversed
+        ? type === edgeTypes["reversed"] || type === edgeTypes["reversed-alternative"]
+        : type === edgeTypes["normal"] || type === edgeTypes["alternative"]
+    )
+    .map(edge => ({
+      ...edge,
+      targetInGraph: graph.nodes.has(edge.target),
+      alternatives: edge.alternatives?.map(alternative => ({
+        target: alternative,
+        targetInGraph: graph.nodes.has(alternative),
+      })),
+    }));
+
+// === Route declarations ===
+interface AllPackagesQuery extends Cursors {
+  size?: string;
+}
+
+interface SinglePackageParams {
+  id: string;
+}
+
+export default fp(async fastify => {
+  fastify.get<{ Querystring: AllPackagesQuery }>(baseUrl, allPackagesRouterOptions, async (request, reply) => {
+    const { after: afterFromQuery, before: beforeFromQuery, size: sizeFromQuery } = request.query;
+    const after = afterFromQuery && decodeURIComponent(afterFromQuery);
+    const before = beforeFromQuery && decodeURIComponent(beforeFromQuery);
 
     if (before && after) reply.code(400).send({ error: "Using before and after at the same time is not allowed." });
     if (before && !graph.nodes.has(before)) reply.code(400).send({ error: `Bad cursor: ${before}` });
     if (after && !graph.nodes.has(after)) reply.code(400).send({ error: `Bad cursor: ${after}` });
 
-    const nodes = _.sortBy([...graph.nodes.keys()]);
+    const defaultPageSize = 100;
+    const pageSize = sizeFromQuery ? parseInt(sizeFromQuery, 10) : defaultPageSize;
+    if (pageSize < 1) reply.code(400).send({ error: `Page size should be at least 1.` });
 
-    const sizeFromReq = size ? parseInt(size, 10) : defaultPageSize;
-    if (sizeFromReq < 1) reply.code(400).send({ error: `Page size should be at least 1.` });
-
-    const { paginated, cursors } = createPaginatedReply({ sizeFromReq, before, after, nodes });
-
-    return { packages: paginated, cursors };
+    const { paginated, cursors } = paginate({
+      after,
+      before,
+      pageSize,
+      nodes: _.sortBy([...graph.nodes.keys()]),
+    });
+    const body: AllPackages = { packages: paginated, cursors };
+    return body;
   });
 
-  fastify.get<{ Params: { name: string } }>(`${baseApiUrl}:name`, singlePackageRouteOps, async (request, reply) => {
-    const { name } = request.params;
+  fastify.get<{ Params: SinglePackageParams }>(`${baseUrl}/:id`, singlePackageRouteOptions, async (request, reply) => {
+    const { id } = request.params;
 
-    const node = graph.nodes.get(name);
-    const edges = graph.edges.get(name);
+    const node = graph.nodes.get(id);
+    const edges = graph.edges.get(id);
 
     if (!node) {
       reply.callNotFound();
     } else {
-      reply.send({
+      const body: SinglePackage = {
         ...node,
-        dependencies: edges.filter(edge => ["normal", "alternative"].includes(edge.type)),
-        reverseDependencies: edges.filter(edge => ["reversed", "reversed-alternative"].includes(edge.type)),
-      });
+        dependencies: createDependenciesFromEdges({ edges, filterReversed: false }),
+        reverseDependencies: createDependenciesFromEdges({ edges, filterReversed: true }),
+      };
+      reply.send(body);
     }
   });
 }, "3.X");

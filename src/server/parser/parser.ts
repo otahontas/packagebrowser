@@ -1,8 +1,34 @@
 import _ from "lodash";
 import DefaultMap from "./defaultMap";
-import { Edge, PackageGraph, Package, PackageObject } from "./types";
-const edgeMapDefaultValue: Edge[] = [];
 
+type PackageObject = Record<string, string>;
+
+export interface Node {
+  name: string;
+  description: string;
+}
+
+export type NodeId = Node["name"];
+
+export enum edgeTypes {
+  "normal",
+  "reversed",
+  "alternative",
+  "reversed-alternative",
+}
+
+export interface Edge {
+  target: NodeId;
+  type: edgeTypes;
+  alternatives?: NodeId[];
+}
+
+interface PackageGraph {
+  nodes: Map<NodeId, Node>;
+  edges: DefaultMap<NodeId, Edge[]>;
+}
+
+const edgeMapDefaultValue: Edge[] = [];
 /**
  * Graph singleton for the whole app.
  */
@@ -18,7 +44,7 @@ export const graph: PackageGraph = {
  *
  * @returns Key-value pairs representing single package
  */
-const parseSinglePackageStringToObject = (pkg: string) => {
+const parseSinglePackageStringToObject = (pkg: string): PackageObject => {
   const debianControlFileKeyValueSplitter = /^([\w-]+):(.+(?:\n .*)*)/gm;
 
   return [...pkg.matchAll(debianControlFileKeyValueSplitter)].reduce((acc: PackageObject, curr: RegExpMatchArray) => {
@@ -32,18 +58,25 @@ const parseSinglePackageStringToObject = (pkg: string) => {
 
 const trimDepencency = (dependency: string) => dependency.split("(")[0].trim();
 
-const addAlternativeDepsToGraph = (node: Package, dependencies: string, graph: PackageGraph) => {
+const addAlternativeDepsToGraph = (nodeId: NodeId, dependencies: string, graph: PackageGraph) => {
   const alternatives = dependencies.split("|").map(dependency => trimDepencency(dependency));
   const [target, ...rest] = alternatives;
 
-  graph.edges.get(node.name).push({ target: target, type: "alternative", alternatives: rest });
+  graph.edges.get(nodeId).push({ target: target, type: edgeTypes["alternative"], alternatives: rest });
   alternatives.forEach(target => {
     graph.edges.get(target).push({
-      target: node.name,
-      type: "reversed-alternative",
+      target: nodeId,
+      type: edgeTypes["reversed-alternative"],
+      alternatives: alternatives.filter(other => other !== target),
     });
   });
 };
+
+// - Remove hard-coded line breaks
+// - Replace dots indicating paragraph breaks with newlines
+// - Drop literal "URL" strings from urls
+const parseDescription = (description: string) =>
+  description.replace(/\n/g, "").replace(/ \. /g, "\n").replace(/URL:/g, "");
 
 const enrichGraphFromPackageObject = (pkg: PackageObject, graph: PackageGraph) => {
   const wantedProperties = ["Package", "Description"];
@@ -55,18 +88,17 @@ const enrichGraphFromPackageObject = (pkg: PackageObject, graph: PackageGraph) =
 
   const node = {
     name: pkg.Package || pkg.Source,
-    description: pkg.Description,
+    description: parseDescription(pkg.Description),
   };
   graph.nodes.set(node.name, node);
 
-  const rawDependencies = pkg.Depends ? pkg.Depends.split(",") : [];
-  rawDependencies.forEach(dependency => {
+  (pkg.Depends?.split(",") || []).forEach(dependency => {
     if (dependency.includes("|")) {
-      addAlternativeDepsToGraph(node, dependency, graph);
+      addAlternativeDepsToGraph(node.name, dependency, graph);
     } else {
       const target = trimDepencency(dependency);
-      graph.edges.get(node.name).push({ target, type: "normal" });
-      graph.edges.get(target).push({ target: node.name, type: "reversed" });
+      graph.edges.get(node.name).push({ target, type: edgeTypes["normal"] });
+      graph.edges.get(target).push({ target: node.name, type: edgeTypes["reversed"] });
     }
   });
 };

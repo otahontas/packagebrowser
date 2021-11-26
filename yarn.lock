@@ -346,6 +346,11 @@
     estree-walker "^2.0.1"
     picomatch "^2.2.2"
 
+"@sinclair/typebox@^0.22.1":
+  version "0.22.1"
+  resolved "https://registry.yarnpkg.com/@sinclair/typebox/-/typebox-0.22.1.tgz#718162cb38d5cf732ea348821cce00d88a10d2b3"
+  integrity sha512-cYkZ5oYd/KrzwcocLtGI4QRi6oniV4eP8IEefEhZp8YjLhrsrHiiaeChs8a9T/YKIlIjHMoxoOCWOUkZ/vviNw==
+
 "@sindresorhus/is@^4.0.0":
   version "4.2.0"
   resolved "https://registry.yarnpkg.com/@sindresorhus/is/-/is-4.2.0.tgz#667bfc6186ae7c9e0b45a08960c551437176e1ca"
