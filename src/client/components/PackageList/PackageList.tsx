@@ -1,11 +1,31 @@
 import * as React from "react";
 import axios from "axios";
+import _ from "lodash";
 import { useInfiniteQuery } from "react-query";
 import { Link as RouterLink } from "react-router-dom";
+import ContentLoader from "react-content-loader";
 import styled from "styled-components";
 import { apiUrl } from "../../conf";
 import type { AllPackages } from "../../../server/routes";
 import { colors, fontWeights } from "../../constants";
+
+const generareRandomNumInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+const Loader = ({ ...rest }) => (
+  <ContentLoader
+    speed={5}
+    width={200}
+    height={1000}
+    viewBox="0 0 200 1000"
+    backgroundColor={colors.gray[300]}
+    foregroundColor={colors.gray[100]}
+    {...rest}
+  >
+    {_.range(15, 1000, 30).map(num => (
+      <rect key={num} x="10" y={num} rx="5" ry="5" width={generareRandomNumInRange(150, 250)} height="10" />
+    ))}
+  </ContentLoader>
+);
 
 const getPackages = async ({ pageParam = undefined }) => {
   const url = !pageParam ? apiUrl : `${apiUrl}?after=${encodeURIComponent(pageParam)}`;
@@ -28,7 +48,7 @@ const Link = styled(RouterLink)`
 const Button = styled.button`
   border-radius: 4px;
   padding: 4px;
-  color: ${props => (props.disabled ? colors.gray[300] : colors.secondary)};
+  color: ${props => (props.disabled ? colors.gray[300] : colors.primary)};
   background-color: ${colors.white};
   border: 2px solid currentColor;
 
@@ -46,7 +66,7 @@ const PackageListView = () => {
     }
   );
 
-  if (status === "loading") return <p>loading....</p>;
+  if (status === "loading") return <Loader />;
   if (status === "error" && error) return <p>Error!....{error.message}</p>;
   return (
     <>
@@ -63,7 +83,7 @@ const PackageListView = () => {
       ))}
       <div>
         <Button onClick={() => fetchNextPage()} disabled={!hasNextPage || isFetchingNextPage}>
-          {isFetchingNextPage ? "Loading more..." : hasNextPage ? "Load More" : "Nothing more to load"}
+          {isFetchingNextPage ? "Fetching..." : hasNextPage ? "Load More" : "Nothing more to load"}
         </Button>
       </div>
     </>
