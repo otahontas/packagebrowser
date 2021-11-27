@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import PackageList from "./components/PackageList";
 import SinglePackage from "./components/SinglePackage";
 import Layout from "./components/Layout";
+import NotFound from "./components/NotFound";
 import GlobalStyle from "./GlobalStyle";
 
 const App = () => {
@@ -16,6 +17,7 @@ const App = () => {
             <Route index element={<PackageList />} />
             <Route path=":packageName" element={<SinglePackage />} />
           </Route>
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
       <GlobalStyle />

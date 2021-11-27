@@ -53,7 +53,6 @@ interface LinkProps {
 }
 
 const Link = styled(RouterLink)`
-  display: block;
   text-decoration: none;
   font-weight: ${fontWeights.medium};
   color: ${colors.gray[900]};
@@ -73,7 +72,7 @@ const DependencyLink = ({ dependency }: LinkProps) =>
 
 const StyledListItem = styled.li`
   &::marker {
-    color: ${colors.secondary};
+    color: ${colors.primary};
     content: " ⇒ ";
   }
 `;
@@ -106,6 +105,11 @@ const DependencyItem = ({ dependency }: DependencyProps) => {
 const Title = styled.h2`
   font-size: 2.5rem;
   font-weight: ${fontWeights.bold};
+`;
+
+const SubTitle = styled.h3`
+  font-size: 2rem;
+  font-weight: ${fontWeights.medium};
 `;
 
 const Description = styled.p`
@@ -145,11 +149,20 @@ const formatDescription = (description: SinglePackage["description"]) => {
 
 const SinglePackageView = () => {
   const { packageName } = useParams();
-  const { status, data, error } = useQuery<SinglePackage, Error>(["singlePackage", packageName], getPackage);
+  const { isLoading, data, error } = useQuery<SinglePackage, Error>(["singlePackage", packageName], getPackage, {
+    retry: (retryCount, error) => {
+      if (error.message.includes("status code 404")) return false;
+      if (retryCount >= 3) return false;
+      return true;
+    },
+  });
 
-  if (status === "loading") return <Loader />;
-  if (status === "error" && error) return <Loader />;
-  if (!data) return <span>Wasn't able to load data for some reason!</span>;
+  if (isLoading) return <Loader />;
+  if (error?.message.includes("status code 404")) {
+    return <Description>Unfortunately there was no package available with this name.</Description>;
+  }
+  if (error) throw error;
+  if (!data) throw new Error("Nothing was returned from server!");
 
   return (
     <Stack>
@@ -157,7 +170,7 @@ const SinglePackageView = () => {
       <Description dangerouslySetInnerHTML={formatDescription(data.description)} />
       {data && data.dependencies.length > 0 && (
         <>
-          <h2>Packages this package depends on</h2>
+          <SubTitle>Packages this package depends on</SubTitle>
           <ul>
             {data.dependencies.map(dependency => (
               <DependencyItem key={dependency.target} dependency={dependency} />
@@ -167,7 +180,7 @@ const SinglePackageView = () => {
       )}
       {data && data.reverseDependencies.length > 0 && (
         <>
-          <h2>Packages that depend on this package</h2>
+          <SubTitle>Packages that depend on this package</SubTitle>
           <ul>
             {data.reverseDependencies.map(dependency => (
               <DependencyItem key={dependency.target} dependency={dependency} />

@@ -6,6 +6,7 @@ import { Link as RouterLink } from "react-router-dom";
 import ContentLoader from "react-content-loader";
 import styled from "styled-components";
 import { apiUrl } from "../../conf";
+import Button from "../Button";
 import type { AllPackages } from "../../../server/routes";
 import { colors, fontWeights } from "../../constants";
 
@@ -45,29 +46,17 @@ const Link = styled(RouterLink)`
   }
 `;
 
-const Button = styled.button`
-  border-radius: 4px;
-  padding: 4px;
-  color: ${props => (props.disabled ? colors.gray[300] : colors.primary)};
-  background-color: ${colors.white};
-  border: 2px solid currentColor;
-
-  &:hover {
-    background-color: ${props => !props.disabled && colors.gray[100]};
-  }
-`;
-
 const PackageListView = () => {
-  const { data, error, fetchNextPage, hasNextPage, isFetchingNextPage, status } = useInfiniteQuery<AllPackages, Error>(
-    "packages",
-    getPackages,
-    {
-      getNextPageParam: lastPage => lastPage.cursors.after,
-    }
-  );
+  const { data, error, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery<
+    AllPackages,
+    Error
+  >("packages", getPackages, {
+    getNextPageParam: lastPage => lastPage.cursors.after,
+  });
 
-  if (status === "loading") return <Loader />;
-  if (status === "error" && error) return <p>Error!....{error.message}</p>;
+  if (isLoading) return <Loader />;
+  if (error) throw error;
+  if (!data) throw new Error("Nothing was returned from server!");
   return (
     <>
       {data?.pages.map((group, i) => (

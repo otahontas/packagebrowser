@@ -2,21 +2,24 @@ import { Outlet } from "react-router-dom";
 import styled from "styled-components";
 import { useParams } from "react-router-dom";
 import { colors, fontWeights } from "../../constants";
+import Button from "../Button";
 import Breadcrumbs, { Crumb } from "../Breadcrumbs";
+import { ErrorBoundary } from "react-error-boundary";
 
 const MainColumn = styled.main`
   flex: 1;
   order: 2;
   padding-top: 32px;
+  min-width: 250px;
 `;
 const LeftColumn = styled.aside`
-  flex-basis: 248px;
+  flex-basis: 250px;
   order: 1;
   align-self: flex-start;
   position: sticky;
   top: 0;
   padding-top: 32px;
-  border-top: 8px solid ${colors.secondary};
+  border-top: 8px solid ${colors.primary};
 `;
 const Header = styled.header``;
 const Wrapper = styled.div`
@@ -32,13 +35,36 @@ const Title = styled.h1`
   font-weight: ${fontWeights.medium};
 `;
 
+interface ErrorFallbackProps {
+  resetErrorBoundary: () => void;
+}
+
+const ErrorWrapper = styled.div``;
+
+const ErrorDescription = styled.p`
+  white-space: pre-line;
+`;
+
+const ErrorFallback = ({ resetErrorBoundary }: ErrorFallbackProps) => (
+  <ErrorWrapper>
+    <ErrorDescription>Something failed while fetching packages!</ErrorDescription>
+    <Button onClick={resetErrorBoundary}>Try again</Button>
+  </ErrorWrapper>
+);
+
 const Layout = () => {
   const { packageName } = useParams();
+
+  const logError = (error: Error) => {
+    console.error(error);
+  };
 
   return (
     <Wrapper>
       <MainColumn>
-        <Outlet />
+        <ErrorBoundary FallbackComponent={ErrorFallback} onError={logError}>
+          <Outlet />
+        </ErrorBoundary>
       </MainColumn>
       <LeftColumn>
         <Header>
