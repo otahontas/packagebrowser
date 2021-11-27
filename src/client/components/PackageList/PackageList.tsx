@@ -1,14 +1,14 @@
-import * as React from "react";
 import axios from "axios";
 import _ from "lodash";
-import { useInfiniteQuery } from "react-query";
-import { Link as RouterLink } from "react-router-dom";
 import ContentLoader from "react-content-loader";
 import styled from "styled-components";
+import { Fragment } from "react";
+import { useInfiniteQuery } from "react-query";
+import { Link as RouterLink } from "react-router-dom";
 import { apiUrl } from "../../conf";
 import Button from "../Button";
-import type { AllPackages } from "../../../server/routes";
 import { colors, fontWeights } from "../../constants";
+import type { AllPackages } from "../../../server/routes";
 
 const generareRandomNumInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
@@ -60,7 +60,7 @@ const PackageListView = () => {
   return (
     <>
       {data?.pages.map((group, i) => (
-        <React.Fragment key={i}>
+        <Fragment key={i}>
           {group.packages.map(packageName => (
             <p key={packageName}>
               <Link key={packageName} to={packageName}>
@@ -68,7 +68,7 @@ const PackageListView = () => {
               </Link>
             </p>
           ))}
-        </React.Fragment>
+        </Fragment>
       ))}
       <div>
         <Button onClick={() => fetchNextPage()} disabled={!hasNextPage || isFetchingNextPage}>

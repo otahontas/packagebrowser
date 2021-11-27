@@ -1,6 +1,6 @@
-import { RouteShorthandOptions } from "fastify";
 import fp from "fastify-plugin";
 import _ from "lodash";
+import { RouteShorthandOptions } from "fastify";
 import { Static, Type } from "@sinclair/typebox";
 import { graph } from "./parser";
 import { edgeTypes } from "./parser";

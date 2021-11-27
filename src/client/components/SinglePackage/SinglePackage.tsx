@@ -1,14 +1,14 @@
-import * as React from "react";
 import axios from "axios";
 import styled from "styled-components";
-import { QueryKey, useQuery } from "react-query";
-import { useParams, Link as RouterLink } from "react-router-dom";
 import _ from "lodash";
 import ContentLoader from "react-content-loader";
+import { Fragment } from "react";
+import { QueryKey, useQuery } from "react-query";
+import { useParams, Link as RouterLink } from "react-router-dom";
 import { apiUrl } from "../../conf";
 import { dependencyTypes } from "../../../server/routes";
-import type { SinglePackage } from "../../../server/routes";
 import { colors, fontWeights } from "../../constants";
+import type { SinglePackage } from "../../../server/routes";
 
 const generareRandomNumInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
@@ -28,10 +28,10 @@ const Loader = ({ ...rest }) => (
     ))}
     <rect x="10" y="230" rx="5" ry="5" width="300" height="30" />
     {_.range(300, 350, 20).map(num => (
-      <React.Fragment key={num}>
+      <Fragment key={num}>
         <circle cx="30" cy={num + 5} r="5" />
         <rect x="45" y={num} rx="5" ry="5" width={generareRandomNumInRange(150, 250)} height="5" />
-      </React.Fragment>
+      </Fragment>
     ))}
   </ContentLoader>
 );

@@ -1,10 +1,10 @@
-import { Outlet } from "react-router-dom";
 import styled from "styled-components";
 import { useParams } from "react-router-dom";
-import { colors, fontWeights } from "../../constants";
+import { Outlet } from "react-router-dom";
+import { ErrorBoundary } from "react-error-boundary";
 import Button from "../Button";
 import Breadcrumbs, { Crumb } from "../Breadcrumbs";
-import { ErrorBoundary } from "react-error-boundary";
+import { colors, fontWeights } from "../../constants";
 
 const MainColumn = styled.main`
   flex: 1;

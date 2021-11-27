@@ -1,5 +1,5 @@
-import * as React from "react";
 import styled from "styled-components";
+import { FC } from "react";
 import { Link } from "react-router-dom";
 import { colors } from "../../constants";
 
@@ -27,7 +27,7 @@ const Wrapper = styled.nav`
   font-size: 0.875rem;
 `;
 
-const Breadcrumbs: React.FC = ({ children }) => {
+const Breadcrumbs: FC = ({ children }) => {
   return <Wrapper>{children}</Wrapper>;
 };
 
@@ -35,7 +35,7 @@ interface CrumbProps {
   to: string;
 }
 
-export const Crumb: React.FC<CrumbProps> = ({ to, children, ...rest }) => {
+export const Crumb: FC<CrumbProps> = ({ to, children, ...rest }) => {
   return (
     <CrumbWrapper>
       <CrumbLink to={to} {...rest}>
