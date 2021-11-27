@@ -1,15 +1,23 @@
 import Fastify, { FastifyInstance } from "fastify";
-import fastifyCors from "fastify-cors";
+import fastifyStatic from "fastify-static";
+import path from "path";
 import routes from "./routes";
 import { createPackageGraph } from "./parser";
 import { readFileFromPathToString, readUrlContentToString } from "./io";
-import { statusFileExampleUrl, statusFilePath, port, frontendUrl } from "./conf";
+import { statusFileExampleUrl, statusFilePath, port, inProduction, address } from "./conf";
 
 const server: FastifyInstance = Fastify({ logger: true });
 server.register(routes);
-server.register(fastifyCors, {
-  origin: frontendUrl,
-});
+
+if (inProduction) {
+  server.register(fastifyStatic, {
+    root: path.join(__dirname, "public"),
+  });
+
+  server.get("*", function (_, reply) {
+    reply.sendFile("index.html");
+  });
+}
 
 const onStart = async () => {
   server.log.info("Reading package file...");
@@ -33,10 +41,17 @@ const onStart = async () => {
   server.log.info("Graph succesfully created!");
 };
 
+const closeGracefully = async () => {
+  server.log.info("Shutting down server...");
+  await server.close();
+  process.exit();
+};
+process.on("SIGINT", closeGracefully);
+
 export const startServer = async () => {
   try {
     await onStart();
-    await server.listen(port);
+    await server.listen(port, address);
   } catch (error) {
     server.log.error("Following error happened file starting server:");
     server.log.error(error);

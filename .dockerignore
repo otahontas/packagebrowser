@@ -1,0 +1,12 @@
+.git
+.husky
+node_modules
+.dockerignore
+.eslintignore
+.eslintrc.js
+.gitgitignore
+.prettierrc
+Dockerfile
+src/client/dist/
+src/client/vite-env.d
+README.md
