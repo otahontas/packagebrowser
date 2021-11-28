@@ -72,11 +72,14 @@ const addAlternativeDepsToGraph = (nodeId: NodeId, dependencies: string, graph: 
   });
 };
 
-// - Remove hard-coded line breaks
+// - Remove hard-coded line breaks, but not the first one
 // - Replace dots indicating paragraph breaks with newlines
 // - Drop literal "URL" strings from urls
-const parseDescription = (description: string) =>
-  description.replace(/\n/g, "").replace(/ \. /g, "\n").replace(/URL:/g, "");
+const parseDescription = (description: string) => {
+  const [shortDescription, ...rest] = description.split("\n");
+  const restFormatted = rest.join("\n").replace(/\n/g, "").replace(/ \. /g, "\n").replace(/URL:/g, "").trim();
+  return shortDescription.trim().concat("\n", restFormatted);
+};
 
 const enrichGraphFromPackageObject = (pkg: PackageObject, graph: PackageGraph) => {
   const wantedProperties = ["Package", "Description"];

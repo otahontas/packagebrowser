@@ -122,29 +122,41 @@ const Stack = styled.div`
   gap: 16px;
 `;
 
-const replaceSymbolsWithLists = (symbol: "+" | "*", original: string) => {
+const replaceSymbolsWithLists = (symbol: "+" | "*" | "-", original: string) => {
   const parts = original.split(`${symbol} `);
   let listed = [parts[0], "<ul>"];
-  parts.forEach(part => (listed = listed.concat(["<li>", part, "</li>"])));
+  parts.slice(1).forEach(part => (listed = listed.concat(["<li>", part, "</li>"])));
   return listed.join("");
 };
 
 const formatDescription = (description: SinglePackage["description"]) => {
-  let formatted = description;
+  // first line as it's own paragraph
+  const [firstLine, ...rest] = description.split("\n");
+  const shortDescription = `<p><strong>${firstLine}</strong></p>`;
 
+  // Format the rest
+  let restFormatted = rest.join("\n");
   // format links with replace
-  formatted = formatted
+  restFormatted = restFormatted
     .replace(/<(.*)>/g, "<a href='$1'>$1</a>")
     .replace(/git:\/\/(.*)/g, "<a href='git://$1'>git://$1<a>");
 
-  // If there are lists made with * or +, replace with <ul> <li> list
-  if (formatted.includes(`* `)) {
-    formatted = replaceSymbolsWithLists("*", formatted);
+  // If there are lists made with *, + or -, replace with <ul> <li> list
+  if (restFormatted.includes(`* `)) {
+    restFormatted = replaceSymbolsWithLists("*", restFormatted);
+  } else if (
+    restFormatted.includes(`+ `) &&
+    ["c++", "g++"].every(str => !restFormatted.toLocaleLowerCase().includes(str))
+  ) {
+    restFormatted = replaceSymbolsWithLists("+", restFormatted);
+  } else if (restFormatted.includes(`- `)) {
+    restFormatted = replaceSymbolsWithLists("-", restFormatted);
   }
-  if (formatted.includes(`+ `) && ["c++", "g++"].every(str => !formatted.toLocaleLowerCase().includes(str))) {
-    formatted = replaceSymbolsWithLists("+", formatted);
-  }
-  return { __html: formatted };
+
+  // Wrap rest to paragraph
+  restFormatted = `<p>${restFormatted}</p>`;
+
+  return { __html: shortDescription.concat(restFormatted) };
 };
 
 const SinglePackageView = () => {
