@@ -12,9 +12,10 @@ server.register(routes);
 if (inProduction) {
   server.register(fastifyStatic, {
     root: path.join(__dirname, "public"),
+    wildcard: false,
   });
 
-  server.get("*", function (_, reply) {
+  server.get("*", (_, reply) => {
     reply.sendFile("index.html");
   });
 }
