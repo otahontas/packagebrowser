@@ -15,8 +15,7 @@
   },
   "lint-staged": {
     "*.{ts,json,md}": "prettier --write",
-    "src/**/*.{ts,tsx}": "eslint",
-    "src/client/**/*": "tsc --noEmit"
+    "src/**/*.{ts,tsx}": "eslint"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.177",
